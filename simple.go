@@ -1,7 +1,7 @@
 package gocache
 
 import (
-	"fmt"
+	"log"
 	"reflect"
 	"sync"
 )
@@ -66,11 +66,11 @@ func (sc *SimpleCache[K, V]) Len() int {
 	return sc.size
 }
 
-func (sc *SimpleCache[K, V]) OrderPrint(index int) {
+func (sc *SimpleCache[K, V]) OrderPrint() {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 	for _, key := range sc.order {
-		fmt.Printf("key: %v, value: %v\n", key, sc.cache[key])
+		log.Printf("key: %v, value: %v\n", key, sc.cache[key])
 	}
 }
 

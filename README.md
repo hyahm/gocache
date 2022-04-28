@@ -33,7 +33,7 @@ func main() {
 
 	cache.Add("adsf", "bbbbb")
 	cache.Add("cccc", "111111")
-	fmt.Println(lru.Len())
+	golog.Info(lru.Len())
 	cache.OrderPrint(0)
 }
 ```

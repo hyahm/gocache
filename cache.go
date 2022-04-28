@@ -6,7 +6,7 @@ type Cacher[K comparable, V any] interface {
 	Add(key K, value V) (K, bool) // 添加值， 如果返回 k, true 说明有删除值，并返回删除的key
 	Remove(key K)                 // 移除k
 	Len() int                     // 长度
-	OrderPrint(int)               // 顺序打印
+	OrderPrint()                  // 顺序打印
 	Get(key K) (V, bool)          // 获取值
 	LastKey() K                   // 获取最先要删除的key
 	Resize(int)                   // 重新定义大小

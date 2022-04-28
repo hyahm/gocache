@@ -1,9 +1,10 @@
 package gocache
 
 import (
-	"fmt"
 	"sync"
 	"time"
+
+	"github.com/hyahm/golog"
 )
 
 type element[K comparable, V any] struct {
@@ -40,10 +41,6 @@ func defaultLru[K comparable, V any]() *Lru[K, V] {
 
 //开始存一个值
 func (lru *Lru[K, V]) Add(key K, value V) (K, bool) {
-	if lru.lru == nil {
-		lru = defaultLru[K, V]()
-	}
-
 	return lru.add(key, value)
 }
 
@@ -139,15 +136,14 @@ func (lru *Lru[K, V]) Remove(key K) {
 	lru.len--
 }
 
-func (lru *Lru[K, V]) OrderPrint(frequent int) {
+func (lru *Lru[K, V]) OrderPrint() {
 	lru.lock.RLock()
 	defer lru.lock.RUnlock()
 	li := lru.root
 	for li != nil {
-		fmt.Printf("key: %v, value: %v, frequent: %d, update_time: %s\n", li.key, li.value, frequent, li.update.String())
+		golog.Infof("key: %v, value: %v, update_time: %s", li.key, li.value, li.update.String())
 		li = li.next
 	}
-
 }
 
 func (lru *Lru[K, V]) Len() int {
@@ -176,21 +172,31 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 	//先要判断是否存在这个key, 存在的话，就将元素移动最开始的位置,
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
-
+	golog.Error("add key: ", key, ", value: ", value)
+	golog.Info("lastkey: ", lru.last.key)
 	if _, ok := lru.lru[key]; ok {
-		//如果是第一个元素的话, 什么也不用操作
+		//如果是第一个元素的话, 更新操作
 		if lru.root.key == key {
 			lru.root.value = value
 			lru.root.update = time.Now()
 
 		} else {
-
 			// 否则就插入到开头, 开头的元素后移
+			golog.Info("move to prev")
 			lru.moveToPrev(key, value)
 		}
 		return key, false
 	} else {
-
+		var removeKey K
+		var isremove bool
+		if lru.Len() >= lru.size {
+			newLastKey := lru.last.prev.key
+			removeKey = lru.removeLast()
+			lru.lru[newLastKey].next = nil
+			lru.last = lru.lru[newLastKey]
+			isremove = true
+		}
+		lru.OrderPrint()
 		el := &element[K, V]{
 			prev:   nil,
 			next:   nil,
@@ -212,24 +218,20 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 		}
 		//如果不存在的话, 直接添加到开头
 		// 第二个元素抽取出来， 也就是当前的root
-		second := lru.root
-		second.prev = el
+		lru.lru[lru.root.key].prev = el
 
-		el.next = lru.root
+		el.next = lru.lru[lru.root.key]
 		//将开头的元素修改成新的元素
 		lru.root = el
-		lru.root.next = second
-		lru.lru[key] = lru.root
-		lru.lru[lru.root.next.key] = lru.root.next
+		lru.lru[key] = el
 		//判断长度是否超过了缓存
-		if lru.Len() >= lru.size {
-			removeKey := lru.removeLast()
-			return removeKey, true
+		if !isremove {
+			lru.len++
 		}
-		lru.len++
 
+		return removeKey, isremove
 	}
-	return key, false
+
 }
 
 // 移除最后一个, 返回key
@@ -272,45 +274,41 @@ func (lru *Lru[K, V]) moveToPrev(key K, value V) {
 		//如果是2个元素
 		//也就是更换元素的值就好了
 		//把第一个元素换到第二去
+		// 新的root 和 last
+		rootKey := lru.last.key
+		lastKey := lru.root.key
 
-		lru.root, lru.last = lru.last, lru.root
-		lru.last.prev = lru.root
-		lru.last.next = nil
-		lru.root.next = lru.last
-		lru.root.prev = nil
-		lru.root.key = key
-		lru.root.value = value
-		lru.root.update = time.Now()
-		lru.lru[key] = lru.root
+		lru.lru[lastKey].next = nil
+		lru.lru[lastKey].prev = lru.lru[rootKey]
+
+		lru.lru[rootKey].next = lru.lru[lastKey]
+		lru.lru[rootKey].prev = nil
+		lru.lru[rootKey].value = value
+		lru.lru[rootKey].update = time.Now()
+
+		lru.root = lru.lru[rootKey]
+		lru.last = lru.lru[lastKey]
 		return
 	}
 	if lru.len > 2 {
 		// 拿到这个key的值
-
-		if lru.lru[key] == lru.last {
-
-			lru.last.prev.next = nil
+		secondKey := lru.root.key
+		if key == lru.last.key {
+			lru.lru[lru.last.prev.key].next = nil
+			lru.last = lru.lru[lru.last.prev.key]
 			// 最后一个元素 是最后一个元素
-			lru.last = lru.last.prev
-			lru.lru[lru.last.key] = lru.last
+		} else {
+			// 如果不是最后一个也不是最前面一个， 一定在中间， 那么直接把
+			// 上一个key 的next 等于下一个
+			// 下一个的prev 等于上一个
+			lru.lru[lru.lru[key].prev.key].next = lru.lru[lru.lru[key].next.key]
+			lru.lru[lru.lru[key].next.key].prev = lru.lru[lru.lru[key].prev.key]
 		}
-		//如果不是, 更新这个元素 上一个和下一个元素的值
-		lru.lru[key].prev.next = lru.lru[key].next
-		lru.lru[key].next.prev = lru.lru[key].prev
-		//抽出来这个值到开头
-		lru.lru[key].prev = nil
-		lru.lru[key].update = time.Now()
+		// 移动到开头
+		lru.lru[secondKey].prev = lru.lru[key]
+		lru.lru[key].next = lru.lru[secondKey]
 		lru.lru[key].value = value
-		lru.lru[key].next = lru.root
-		// tmp 是第二个元素
-		tmp := lru.root
 		lru.root = lru.lru[key]
-
-		// 更新 第二个元素
-		tmp.prev = lru.root
-		//更新第二个元素的Lru
-		lru.lru[tmp.key] = tmp
-
 	}
 }
 

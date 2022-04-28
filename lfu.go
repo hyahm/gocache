@@ -3,6 +3,8 @@ package gocache
 import (
 	"reflect"
 	"sync"
+
+	"github.com/hyahm/golog"
 )
 
 // 以lru为基础
@@ -18,11 +20,12 @@ type Lfu[K comparable, V any] struct {
 	claddingSize int
 }
 
-func (lfu *Lfu[K, V]) OrderPrint(frequent int) {
+func (lfu *Lfu[K, V]) OrderPrint() {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	for frequent, lru := range lfu.frequent {
-		lru.OrderPrint(frequent)
+		golog.Info("frequent: ", frequent)
+		lru.OrderPrint()
 	}
 
 }
