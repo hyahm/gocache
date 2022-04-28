@@ -1,10 +1,9 @@
 package gocache
 
 import (
+	"fmt"
 	"sync"
 	"time"
-
-	"github.com/hyahm/golog"
 )
 
 type element[K comparable, V any] struct {
@@ -141,7 +140,7 @@ func (lru *Lru[K, V]) OrderPrint() {
 	defer lru.lock.RUnlock()
 	li := lru.root
 	for li != nil {
-		golog.Infof("key: %v, value: %v, update_time: %s", li.key, li.value, li.update.String())
+		fmt.Printf("key: %v, value: %v, update_time: %s\n", li.key, li.value, li.update.String())
 		li = li.next
 	}
 }
@@ -172,8 +171,6 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 	//先要判断是否存在这个key, 存在的话，就将元素移动最开始的位置,
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
-	golog.Error("add key: ", key, ", value: ", value)
-	golog.Info("lastkey: ", lru.last.key)
 	if _, ok := lru.lru[key]; ok {
 		//如果是第一个元素的话, 更新操作
 		if lru.root.key == key {
@@ -182,7 +179,6 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 
 		} else {
 			// 否则就插入到开头, 开头的元素后移
-			golog.Info("move to prev")
 			lru.moveToPrev(key, value)
 		}
 		return key, false
@@ -196,7 +192,6 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 			lru.last = lru.lru[newLastKey]
 			isremove = true
 		}
-		lru.OrderPrint()
 		el := &element[K, V]{
 			prev:   nil,
 			next:   nil,
@@ -225,9 +220,7 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 		lru.root = el
 		lru.lru[key] = el
 		//判断长度是否超过了缓存
-		if !isremove {
-			lru.len++
-		}
+		lru.len++
 
 		return removeKey, isremove
 	}
@@ -257,10 +250,10 @@ func (lru *Lru[K, V]) removeLast() K {
 			lru.lru = make(map[K]*element[K, V])
 			return lastKey
 		}
-		delete(lru.lru, lastKey)
-		lru.len--
-	}
 
+	}
+	delete(lru.lru, lastKey)
+	lru.len--
 	return lastKey
 }
 

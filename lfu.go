@@ -1,10 +1,9 @@
 package gocache
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
-
-	"github.com/hyahm/golog"
 )
 
 // 以lru为基础
@@ -24,7 +23,7 @@ func (lfu *Lfu[K, V]) OrderPrint() {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	for frequent, lru := range lfu.frequent {
-		golog.Info("frequent: ", frequent)
+		fmt.Println("frequent: ", frequent)
 		lru.OrderPrint()
 	}
 

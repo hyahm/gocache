@@ -2,12 +2,10 @@ package main
 
 import (
 	"github.com/hyahm/gocache"
-	"github.com/hyahm/golog"
 )
 
 func main() {
-	defer golog.Sync()
-	l := gocache.NewCache[string, any](3, gocache.LRU)
+	l := gocache.NewCache[string, any](3, gocache.LFU)
 	l.Add("apple", 1)
 	l.OrderPrint()
 	// time.Sleep(time.Second)
