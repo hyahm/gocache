@@ -1,7 +1,6 @@
 package gocache
 
 import (
-	"fmt"
 	"reflect"
 	"sync"
 )
@@ -12,17 +11,17 @@ type Lfu[K comparable, V any] struct {
 	frequent map[int]*Lru[K, V]
 
 	// 这里是根据key来查询在那一层
-	cache map[K]int
-	min   int // 记录当前最小层的值
-	mu    sync.RWMutex
-	size  int // 大小
+	cache        map[K]int
+	min          int // 记录当前最小层的值
+	mu           sync.RWMutex
+	size         int // 大小
+	claddingSize int
 }
 
 func (lfu *Lfu[K, V]) OrderPrint(frequent int) {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	for frequent, lru := range lfu.frequent {
-		fmt.Printf("%#v\n", lru)
 		lru.OrderPrint(frequent)
 	}
 
@@ -44,11 +43,11 @@ func (lfu *Lfu[K, V]) add(index int, key K, value V) {
 	lfu.frequent[index].Add(key, value)
 }
 
-func (lfu *Lfu[K, V]) getMin(start int) int {
+func (lfu *Lfu[K, V]) getMin(start int) {
 	if lfu.frequent[start].Len() > 0 {
-		return start
+		lfu.min = start
 	} else {
-		return lfu.getMin(start + 1)
+		lfu.getMin(start + 1)
 	}
 }
 
@@ -83,30 +82,31 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	defer lfu.mu.Unlock()
 
 	if li, ok := lfu.cache[key]; ok {
-		// 如果存在的话，删除此层的值，
-		lfu.frequent[li].Remove(key)
-		//添加到新层中
 		// 判断是否存在新层， 不存在就新建
 		lfu.cache[key] = li + 1
-		lfu.add(li+1, key, value)
+		if li/lfu.claddingSize != li+1/lfu.claddingSize {
+			// 从原来的那层中删除
+			lfu.frequent[li].Remove(key)
+			// 原来的那一层没有了就删除
+			if lfu.frequent[li].Len() == 0 {
+				delete(lfu.frequent, li)
+				// 计算最小层
+				lfu.getMin(li + 1)
+			}
+		}
+		lfu.add(li+1/lfu.claddingSize, key, value)
 	} else {
-		lfu.cache[key] = 1
-		lfu.min = 1
-		lfu.add(1, key, value)
-		// 判断是否超过了缓存值
+		// 如果当前的大小大于等于
 		if len(lfu.cache) >= int(lfu.size) {
 			// 删除最后一个
 			removeKey := lfu.frequent[lfu.min].RemoveLast()
 			// 删除总缓存
 			delete(lfu.cache, removeKey)
-			if lfu.frequent[lfu.min].Len() == 0 {
-				// 如果长度为空， 我们就要重新获取最小层
-				// delete(frequent, min)
-				// 继续取最小层数
-				lfu.min = lfu.getMin(lfu.min + 1)
-			}
-			return removeKey, true
 		}
+		lfu.cache[key] = 0
+		lfu.min = 0
+		lfu.add(lfu.cache[key]/lfu.claddingSize, key, value)
+		// 判断是否超过了缓存值
 	}
 	return key, false
 }

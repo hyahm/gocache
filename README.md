@@ -1,5 +1,5 @@
 # 缓存算法（lru, lfu, alfu）
- 线程安全的go语言通用lru, lfu, alfu）算法,   
+ 线程安全的go语言通用simple, lru, lfu, alfu）算法,   
  alfu算法是在lfu算法基础增加动态减少层级来补全lfu的弊端   
 ### 安装 (go version >= 1.18)
 ```
@@ -11,7 +11,8 @@ go get github.com/hyahm/lru
 超过设定值会自动删除末尾的值, 如果存在的话会自动更新此值到开头, 更新值
  > 初始化(初始化完成后, 可以在任何地方调用方法)
   ```
-  lru.Init(<缓存个数>, <算法>)
+  // 每层步长: lfu 或者 alfu 访问次数步长间距,  如果设置10，那么 1次访问和9次之间的访问都在这一层遵循 lru算法
+  gocache.NewCache[comparable, any](<缓存个数>, <算法>, [每层步长])
   ```
  > 添加 key和value, 以下为doc中的例子
   ```
