@@ -44,6 +44,24 @@ func (sc *SimpleCache[K, V]) Get(key K) (V, bool) {
 	return reflect.Zero(reflect.TypeOf(v)).Interface().(V), false
 }
 
+func (sc *SimpleCache[K, V]) Resize(size int) {
+	if size <= 0 || size == sc.size {
+		return
+	}
+	if size > sc.size {
+		sc.size = size
+		return
+	}
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+	sc.size = size
+	for index, v := range sc.order[size:] {
+		sc.order = append(sc.order[:index], sc.order[index+1:]...)
+		delete(sc.cache, v)
+		return
+	}
+}
+
 func (sc *SimpleCache[K, V]) Len() int {
 	return sc.size
 }

@@ -29,9 +29,9 @@ func (lfu *Lfu[K, V]) OrderPrint(frequent int) {
 
 // 为了方便修改， 一样也需要一个双向链表
 
-func (lfu *Lfu[K, V]) add(index int, key K, value V) {
-	if _, ok := lfu.frequent[index]; !ok {
-		lfu.frequent[index] = &Lru[K, V]{
+func (lfu *Lfu[K, V]) add(level int, key K, value V) {
+	if _, ok := lfu.frequent[level]; !ok {
+		lfu.frequent[level] = &Lru[K, V]{
 			lru:  make(map[K]*element[K, V], 0),
 			size: lfu.size,
 			lock: sync.RWMutex{},
@@ -40,7 +40,7 @@ func (lfu *Lfu[K, V]) add(index int, key K, value V) {
 		}
 	}
 
-	lfu.frequent[index].Add(key, value)
+	lfu.frequent[level].Add(key, value)
 }
 
 func (lfu *Lfu[K, V]) getMin(start int) {
@@ -68,11 +68,29 @@ func (lfu *Lfu[K, V]) Remove(key K) {
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
 	// 先找到这个key
-	if index, ok := lfu.cache[key]; ok {
-		if _, ok := lfu.frequent[index]; ok {
-			lfu.frequent[index].Remove(key)
-		}
+	if frequent, ok := lfu.cache[key]; ok {
+		level := frequent / lfu.claddingSize
+		lfu.frequent[level].Remove(key)
 		delete(lfu.cache, key)
+		if lfu.frequent[level].Len() == 0 {
+			delete(lfu.frequent, level)
+			lfu.getMin(level + 1)
+		}
+	}
+}
+
+func (lfu *Lfu[K, V]) Resize(size int) {
+	if size <= 0 || size == lfu.size {
+		return
+	}
+	if size > lfu.size {
+		lfu.size = size
+		return
+	}
+	lfu.size = size
+	for i := size; i < lfu.size; i++ {
+		rmKey := lfu.LastKey()
+		lfu.Remove(rmKey)
 	}
 }
 
@@ -81,20 +99,20 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
 
-	if li, ok := lfu.cache[key]; ok {
+	if frequent, ok := lfu.cache[key]; ok {
 		// 判断是否存在新层， 不存在就新建
-		lfu.cache[key] = li + 1
-		if li/lfu.claddingSize != li+1/lfu.claddingSize {
+		lfu.cache[key] = frequent + 1
+		if frequent/lfu.claddingSize != frequent+1/lfu.claddingSize {
 			// 从原来的那层中删除
-			lfu.frequent[li].Remove(key)
+			lfu.frequent[frequent].Remove(key)
 			// 原来的那一层没有了就删除
-			if lfu.frequent[li].Len() == 0 {
-				delete(lfu.frequent, li)
+			if lfu.frequent[frequent].Len() == 0 {
+				delete(lfu.frequent, frequent)
 				// 计算最小层
-				lfu.getMin(li + 1)
+				lfu.getMin(frequent + 1)
 			}
 		}
-		lfu.add(li+1/lfu.claddingSize, key, value)
+		lfu.add(frequent+1/lfu.claddingSize, key, value)
 	} else {
 		// 如果当前的大小大于等于
 		if len(lfu.cache) >= int(lfu.size) {
@@ -115,8 +133,8 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 func (lfu *Lfu[K, V]) Get(key K) (V, bool) {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
-	if index, ok := lfu.cache[key]; ok {
-		if v, ok := lfu.frequent[index]; ok {
+	if frequent, ok := lfu.cache[key]; ok {
+		if v, ok := lfu.frequent[frequent/lfu.claddingSize]; ok {
 			return v.Get(key)
 		}
 	}
