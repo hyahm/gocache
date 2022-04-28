@@ -17,7 +17,7 @@ const (
 	LRU Algorithm = iota
 	LFU
 	ALFU
-	Simple
+	SIMPLE
 )
 
 // size: max length of cache
@@ -28,7 +28,7 @@ func NewCache[K comparable, V any](size int, t Algorithm, claddingSize ...int) C
 		size = 2 << 10
 	}
 	switch t {
-	case Simple:
+	case SIMPLE:
 		return &SimpleCache[K, V]{
 			cache: make(map[K]V),
 			order: make([]K, size),
