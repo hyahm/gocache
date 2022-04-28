@@ -9,7 +9,7 @@ import (
 // 以lru为基础
 
 type Lfu[K comparable, V any] struct {
-	frequent map[int]*Lru[K, V]
+	row map[int]*Lru[K, V]
 
 	// 这里是根据key来查询在那一层
 	cache        map[K]int
@@ -22,7 +22,7 @@ type Lfu[K comparable, V any] struct {
 func (lfu *Lfu[K, V]) OrderPrint() {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
-	for frequent, lru := range lfu.frequent {
+	for frequent, lru := range lfu.row {
 		fmt.Println("frequent: ", frequent)
 		lru.OrderPrint()
 	}
@@ -32,21 +32,27 @@ func (lfu *Lfu[K, V]) OrderPrint() {
 // 为了方便修改， 一样也需要一个双向链表
 
 func (lfu *Lfu[K, V]) add(level int, key K, value V) {
-	if _, ok := lfu.frequent[level]; !ok {
-		lfu.frequent[level] = &Lru[K, V]{
+	if _, ok := lfu.row[level]; !ok {
+		lfu.row[level] = &Lru[K, V]{
 			lru:  make(map[K]*element[K, V], 0),
 			size: lfu.size,
 			lock: sync.RWMutex{},
 			root: &element[K, V]{},
 			last: &element[K, V]{},
+			len:  0,
 		}
 	}
 
-	lfu.frequent[level].Add(key, value)
+	lfu.row[level].Add(key, value)
 }
 
 func (lfu *Lfu[K, V]) getMin(start int) {
-	if lfu.frequent[start].Len() > 0 {
+	if len(lfu.cache) == 1 {
+		lfu.min = start
+		return
+	}
+
+	if lfu.row[start].Len() > 0 {
 		lfu.min = start
 	} else {
 		lfu.getMin(start + 1)
@@ -63,7 +69,7 @@ func (lfu *Lfu[K, V]) Len() int {
 func (lfu *Lfu[K, V]) LastKey() K {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
-	return lfu.frequent[lfu.min].LastKey()
+	return lfu.row[lfu.min].LastKey()
 }
 
 func (lfu *Lfu[K, V]) Remove(key K) {
@@ -72,11 +78,13 @@ func (lfu *Lfu[K, V]) Remove(key K) {
 	// 先找到这个key
 	if frequent, ok := lfu.cache[key]; ok {
 		level := frequent / lfu.claddingSize
-		lfu.frequent[level].Remove(key)
-		delete(lfu.cache, key)
-		if lfu.frequent[level].Len() == 0 {
-			delete(lfu.frequent, level)
-			lfu.getMin(level + 1)
+		lfu.row[level].Remove(key)
+		if lfu.row[level].Len() == 0 {
+			// 先找大一点的
+			lfu.getMin(level)
+			if len(lfu.cache) > 1 {
+				delete(lfu.row, level)
+			}
 		}
 	}
 }
@@ -100,26 +108,29 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	// 添加一个key
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
-
 	if frequent, ok := lfu.cache[key]; ok {
 		// 判断是否存在新层， 不存在就新建
-		lfu.cache[key] = frequent + 1
-		if frequent/lfu.claddingSize != frequent+1/lfu.claddingSize {
+		level := frequent / lfu.claddingSize
+		if level != frequent+1/lfu.claddingSize {
 			// 从原来的那层中删除
-			lfu.frequent[frequent].Remove(key)
-			// 原来的那一层没有了就删除
-			if lfu.frequent[frequent].Len() == 0 {
-				delete(lfu.frequent, frequent)
+			lfu.row[level].Remove(key)
+			// 如果这一行没有数据了
+			if lfu.row[level].Len() == 0 {
 				// 计算最小层
-				lfu.getMin(frequent + 1)
+				lfu.getMin(level)
+				if len(lfu.cache) > 1 {
+					delete(lfu.row, level)
+				}
+
 			}
 		}
 		lfu.add(frequent+1/lfu.claddingSize, key, value)
+		lfu.cache[key] = frequent + 1
 	} else {
 		// 如果当前的大小大于等于
 		if len(lfu.cache) >= int(lfu.size) {
 			// 删除最后一个
-			removeKey := lfu.frequent[lfu.min].RemoveLast()
+			removeKey := lfu.row[lfu.min].RemoveLast()
 			// 删除总缓存
 			delete(lfu.cache, removeKey)
 		}
@@ -136,7 +147,7 @@ func (lfu *Lfu[K, V]) Get(key K) (V, bool) {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	if frequent, ok := lfu.cache[key]; ok {
-		if v, ok := lfu.frequent[frequent/lfu.claddingSize]; ok {
+		if v, ok := lfu.row[frequent/lfu.claddingSize]; ok {
 			return v.Get(key)
 		}
 	}

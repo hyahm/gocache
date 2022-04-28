@@ -18,8 +18,7 @@ func (lfu *Alfu[K, V]) auto() {
 		select {
 		case <-tick.C:
 			lfu.mu.Lock()
-			defer lfu.mu.Unlock()
-			for index, lru := range lfu.frequent {
+			for index, lru := range lfu.row {
 				if index == lfu.min {
 					continue
 				}
@@ -39,6 +38,7 @@ func (lfu *Alfu[K, V]) auto() {
 
 				}
 			}
+			lfu.mu.Unlock()
 		}
 
 	}
