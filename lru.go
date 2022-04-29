@@ -1,6 +1,7 @@
 package gocache
 
 import (
+	"reflect"
 	"sync"
 	"time"
 
@@ -54,7 +55,8 @@ func (lru *Lru[K, V]) Get(key K) (V, bool) {
 	if _, ok := lru.lru[key]; ok {
 		return lru.lru[key].value, true
 	}
-	return lru.lru[key].value, false
+	var v V
+	return reflect.Zero(reflect.TypeOf(v)).Interface().(V), false
 }
 
 func (lru *Lru[K, V]) GetLastKeyUpdateTime() (K, V, time.Time) {
