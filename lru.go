@@ -1,11 +1,10 @@
 package gocache
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
-
-	"github.com/hyahm/golog"
 )
 
 type element[K comparable, V any] struct {
@@ -96,43 +95,37 @@ func (lru *Lru[K, V]) PrevKey(key K) any {
 }
 
 func (lru *Lru[K, V]) Remove(key K) {
-	if lru.lru == nil {
-		return
-	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
 	// 不存在就直接返回
 	if _, ok := lru.lru[key]; !ok {
 		return
 	}
-	this := lru.lru[key]
-	//如果是第一个元素
-	if this == lru.root {
-		lru.root = lru.root.next
-		lru.root.prev = nil
-		// 更新第二个元素的值
-		lru.lru[lru.root.key] = lru.root
-		delete(lru.lru, key)
-		lru.len--
-		return
-	}
-	//如果是最后一个
-	if this == lru.last {
-		lru.last = lru.last.prev
-		lru.last.next = nil
-		lru.lru[lru.last.key] = lru.last
-		delete(lru.lru, key)
-		lru.len--
-		return
+
+	switch key {
+	case lru.root.key:
+		//如果是第一个元素
+		if lru.root.next != nil {
+			nextKey := lru.root.next.key
+			// 如果第二个元素存在就将 root指向第二个元素
+			lru.root = lru.lru[nextKey]
+			lru.lru[nextKey].prev = nil
+		}
+	case lru.last.key:
+		if lru.last.prev != nil {
+			prevKey := lru.last.prev.key
+			lru.last = lru.lru[prevKey]
+			lru.lru[prevKey].next = nil
+		}
+	default:
+		// 更改上一个元素的下一个值
+		lru.lru[key].prev.next = lru.lru[key].next
+		//更新下一个元素的上一个值
+		lru.lru[key].next.prev = lru.lru[key].prev
+		// lru.lru[lru.lru[key].prev.key] = lru.lru[key].prev
+		// lru.lru[lru.lru[key].next.key] = lru.lru[key].next
 	}
 
-	// 更改上一个元素的下一个值
-
-	lru.lru[key].prev.next = lru.lru[key].next
-	//更新下一个元素的上一个值
-	lru.lru[key].next.prev = lru.lru[key].prev
-	lru.lru[lru.lru[key].prev.key] = lru.lru[key].prev
-	lru.lru[lru.lru[key].next.key] = lru.lru[key].next
 	//删除
 	delete(lru.lru, key)
 	lru.len--
@@ -143,7 +136,7 @@ func (lru *Lru[K, V]) OrderPrint() {
 	defer lru.lock.RUnlock()
 	li := lru.root
 	for li != nil {
-		golog.Infof("key: %v, value: %v, update_time: %s", li.key, li.value, li.update.String())
+		fmt.Printf("key: %v, value: %v, update_time: %s\n", li.key, li.value, li.update.String())
 		li = li.next
 	}
 }
@@ -174,8 +167,6 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 	//先要判断是否存在这个key, 存在的话，就将元素移动最开始的位置,
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
-	golog.Error("add key: ", key, ", value: ", value)
-	golog.Info("lastkey: ", lru.last.key)
 	if _, ok := lru.lru[key]; ok {
 		//如果是第一个元素的话, 更新操作
 		if lru.root.key == key {
@@ -184,7 +175,6 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 
 		} else {
 			// 否则就插入到开头, 开头的元素后移
-			golog.Info("move to prev")
 			lru.moveToPrev(key, value)
 		}
 		return key, false
@@ -198,7 +188,6 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 			lru.last = lru.lru[newLastKey]
 			isremove = true
 		}
-		lru.OrderPrint()
 		el := &element[K, V]{
 			prev:   nil,
 			next:   nil,
@@ -227,9 +216,7 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 		lru.root = el
 		lru.lru[key] = el
 		//判断长度是否超过了缓存
-		if !isremove {
-			lru.len++
-		}
+		lru.len++
 
 		return removeKey, isremove
 	}
@@ -259,10 +246,10 @@ func (lru *Lru[K, V]) removeLast() K {
 			lru.lru = make(map[K]*element[K, V])
 			return lastKey
 		}
-		delete(lru.lru, lastKey)
-		lru.len--
-	}
 
+	}
+	delete(lru.lru, lastKey)
+	lru.len--
 	return lastKey
 }
 

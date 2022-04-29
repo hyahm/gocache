@@ -47,10 +47,10 @@ func NewCache[K comparable, V any](size int, t Algorithm, claddingSize ...int) C
 	case LFU:
 		cs := 1
 		if len(claddingSize) > 0 && claddingSize[0] > 1 {
-			cs = 1
+			cs = claddingSize[0]
 		}
 		return &Lfu[K, V]{
-			frequent: make(map[int]*Lru[K, V]),
+			row: make(map[int]*Lru[K, V]),
 			// 这里是根据key来查询在那一层
 			cache:        make(map[K]int),
 			mu:           sync.RWMutex{},
@@ -60,11 +60,11 @@ func NewCache[K comparable, V any](size int, t Algorithm, claddingSize ...int) C
 	case ALFU:
 		cs := 1
 		if len(claddingSize) > 0 && claddingSize[0] > 1 {
-			cs = 1
+			cs = claddingSize[0]
 		}
 		alfu := &Alfu[K, V]{
 			&Lfu[K, V]{
-				frequent: make(map[int]*Lru[K, V]),
+				row: make(map[int]*Lru[K, V]),
 				// 这里是根据key来查询在那一层
 				cache:        make(map[K]int),
 				mu:           sync.RWMutex{},
