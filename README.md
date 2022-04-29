@@ -34,7 +34,7 @@ add goroutine below
 ```
 ### Install (go version >= 1.18)
 ```
-go get github.com/hyahm/lru
+go get github.com/hyahm/gocache
 ```
 
 ### Cacher 
