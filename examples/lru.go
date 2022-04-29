@@ -1,32 +1,23 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/hyahm/gocache"
 )
 
 func main() {
-	l := gocache.NewCache[string, any](3, gocache.LFU, 2)
-	l.Add("apple", 1)
-	l.OrderPrint()
-	// time.Sleep(time.Second)
-	l.Add("orange", 2)
-	l.OrderPrint()
-	l.Add("apple", 3)
-	l.OrderPrint()
-	l.Add("orange", 378)
-	l.OrderPrint()
-	l.Add("orange", 313)
-	l.OrderPrint()
-	l.Add("apple", 262)
-	l.OrderPrint()
-	l.Add("mkey", 262)
-	l.OrderPrint()
-	l.Add("banana", 262)
-	l.OrderPrint()
-	l.Add("apple", 3)
+	cache := gocache.NewCache[string, string](3, gocache.LFU, 2)
 
-	l.OrderPrint()
-	l.Add("orange", 313)
-	l.OrderPrint()
+	cache.Add("adsf", "bbbbb")
+	cache.Add("cccc", "111111")
+	cache.OrderPrint()
+	/*
+		key:  cccc, value: 111111
+		key:  adsf, value: bbbbb
+	*/
+	if value, ok := cache.Get("cccc"); ok {
+		fmt.Println(value) // "111111"
+	}
 
 }

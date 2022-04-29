@@ -60,12 +60,12 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/hyahm/gocache"
 )
 
-
 func main() {
-	cache = gocache.NewCache[string, string](3, gocache.LFU, 2)
+	cache := gocache.NewCache[string, string](3, gocache.LFU, 2)
 
 	cache.Add("adsf", "bbbbb")
 	cache.Add("cccc", "111111")
@@ -74,9 +74,9 @@ func main() {
 		key:  cccc, value: 111111
 		key:  adsf, value: bbbbb
 	*/
-	if value, ok := cache.Get("cccc") {
-		fmt.Println(value)  // "111111"
+	if value, ok := cache.Get("cccc"); ok {
+		fmt.Println(value) // "111111"
 	}
-	
+
 }
 ```
