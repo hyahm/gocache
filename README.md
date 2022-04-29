@@ -69,7 +69,6 @@ func main() {
 
 	cache.Add("adsf", "bbbbb")
 	cache.Add("cccc", "111111")
-	golog.Info(lru.Len())
 	cache.OrderPrint(0)
 }
 ```

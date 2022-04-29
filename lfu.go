@@ -109,16 +109,18 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
 	if frequent, ok := lfu.cache[key]; ok {
+
 		// 判断是否存在新层， 不存在就新建
 		level := frequent / lfu.claddingSize
 		if level != frequent+1/lfu.claddingSize {
 			// 从原来的那层中删除
 			lfu.row[level].Remove(key)
-			// 如果这一行没有数据了
-			if lfu.row[level].Len() == 0 {
-				// 计算最小层
+
+			if lfu.row[level].Len() == 0 && level == lfu.min {
+				// // 如果这一行没有数据了, 并且是最小的一行 那么计算最小层
 				lfu.getMin(level)
 				if len(lfu.cache) > 1 {
+					// 至少留一层
 					delete(lfu.row, level)
 				}
 
