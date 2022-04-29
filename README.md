@@ -1,4 +1,4 @@
-# 缓存算法（lru, lfu, alfu）
+# Build-in Go Cache（lru, lfu, alfu）
 Thread-safe go language general simple, lru, lfu, alfu) algorithm
 
 ### What is alfu
