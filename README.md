@@ -69,6 +69,6 @@ func main() {
 
 	cache.Add("adsf", "bbbbb")
 	cache.Add("cccc", "111111")
-	cache.OrderPrint(0)
+	cache.OrderPrint()
 }
 ```
