@@ -22,9 +22,14 @@ type Lfu[K comparable, V any] struct {
 func (lfu *Lfu[K, V]) OrderPrint() {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
-	for frequent, lru := range lfu.row {
-		fmt.Println("frequent: ", frequent)
-		lru.OrderPrint()
+	level := lfu.min
+	for i := 0; i < lfu.Len(); {
+		if lfu.row[level].Len() != 0 {
+			fmt.Println("row: ", level)
+			lfu.row[level].OrderPrint()
+		}
+		i += lfu.row[level].Len()
+		level = lfu.getNextMin(level + 1)
 	}
 
 }
@@ -44,6 +49,15 @@ func (lfu *Lfu[K, V]) add(level int, key K, value V) {
 	}
 
 	lfu.row[level].Add(key, value)
+}
+
+func (lfu *Lfu[K, V]) getNextMin(start int) int {
+	for {
+		if _, ok := lfu.row[start]; ok {
+			return start
+		}
+		start++
+	}
 }
 
 func (lfu *Lfu[K, V]) getMin(start int) {
@@ -114,6 +128,7 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 		level := frequent / lfu.claddingSize
 		if level != frequent+1/lfu.claddingSize {
 			// 从原来的那层中删除
+			fmt.Println("remove, key", level)
 			lfu.row[level].Remove(key)
 
 			if lfu.row[level].Len() == 0 && level == lfu.min {
