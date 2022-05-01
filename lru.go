@@ -40,6 +40,9 @@ func defaultLru[K comparable, V any]() *Lru[K, V] {
 
 //开始存一个值
 func (lru *Lru[K, V]) Add(key K, value V) (K, bool) {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+	}
 	return lru.add(key, value)
 }
 
@@ -58,6 +61,9 @@ func (lru *Lru[K, V]) Get(key K) (V, bool) {
 }
 
 func (lru *Lru[K, V]) GetLastKeyUpdateTime() (K, V, time.Time) {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+	}
 	lru.lock.RLock()
 	defer lru.lock.RUnlock()
 	return lru.last.key, lru.last.value, lru.last.update
@@ -94,6 +100,10 @@ func (lru *Lru[K, V]) PrevKey(key K) any {
 }
 
 func (lru *Lru[K, V]) Remove(key K) {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+		return
+	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
 	// 不存在就直接返回
@@ -131,6 +141,10 @@ func (lru *Lru[K, V]) Remove(key K) {
 }
 
 func (lru *Lru[K, V]) OrderPrint() {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+		return
+	}
 	lru.lock.RLock()
 	defer lru.lock.RUnlock()
 	lru.orderPrint()
@@ -149,6 +163,16 @@ func (lru *Lru[K, V]) Len() int {
 }
 
 func (lru *Lru[K, V]) Resize(size int) {
+	if lru.lru == nil {
+		lru = &Lru[K, V]{
+			lru:  make(map[K]*element[K, V], 0),
+			size: size,
+			lock: sync.RWMutex{},
+			root: &element[K, V]{},
+			last: &element[K, V]{},
+		}
+		return
+	}
 	//如果缩小了缓存, 那么可能需要删除后面多余的索引
 	if size <= 0 || size == lru.size {
 		return
@@ -167,6 +191,7 @@ func (lru *Lru[K, V]) Resize(size int) {
 
 // 返回被删除的key, 如果没删除返回nil
 func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
+
 	//先要判断是否存在这个key, 存在的话，就将元素移动最开始的位置,
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
@@ -228,6 +253,11 @@ func (lru *Lru[K, V]) add(key K, value V) (K, bool) {
 
 // 移除最后一个, 返回key
 func (lru *Lru[K, V]) RemoveLast() K {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+		var v K
+		return reflect.Zero(reflect.TypeOf(v)).Interface().(K)
+	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
 	return lru.removeLast()
@@ -304,13 +334,23 @@ func (lru *Lru[K, V]) moveToPrev(key K, value V) {
 	}
 }
 
-func (lru *Lru[K, V]) FirstKey() any {
+func (lru *Lru[K, V]) FirstKey() K {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+		var v K
+		return reflect.Zero(reflect.TypeOf(v)).Interface().(K)
+	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
 	return lru.root.key
 }
 
 func (lru *Lru[K, V]) LastKey() K {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+		var v K
+		return reflect.Zero(reflect.TypeOf(v)).Interface().(K)
+	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
 	return lru.last.key
@@ -319,19 +359,26 @@ func (lru *Lru[K, V]) LastKey() K {
 func (lru *Lru[K, V]) Clean(n int) {
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
-	lru = nil
-	lru.lru = nil
-	lru = &Lru[K, V]{
-		lru:  make(map[K]*element[K, V], 0),
-		len:  0,
-		size: n,
-		lock: sync.RWMutex{},
-		root: &element[K, V]{},
-		last: &element[K, V]{},
+	if lru.size != 0 {
+		lru = &Lru[K, V]{
+			lru:  make(map[K]*element[K, V], 0),
+			len:  0,
+			size: lru.size,
+			lock: sync.RWMutex{},
+			root: &element[K, V]{},
+			last: &element[K, V]{},
+		}
+	} else {
+		lru = defaultLru[K, V]()
 	}
+
 }
 
 func (lru *Lru[K, V]) Exsit(key K) bool {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+		return false
+	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
 	if _, ok := lru.lru[key]; ok {

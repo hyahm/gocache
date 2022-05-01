@@ -6,6 +6,17 @@ import (
 	"sync"
 )
 
+func defaultLfu[K comparable, V any]() *Lfu[K, V] {
+	return &Lfu[K, V]{
+		row: make(map[int]*Lru[K, V]),
+		// 这里是根据key来查询在那一层
+		cache:        make(map[K]int),
+		mu:           sync.RWMutex{},
+		size:         DEFAULTCOUNT,
+		claddingSize: 1,
+	}
+}
+
 // 以lru为基础
 
 type Lfu[K comparable, V any] struct {
@@ -20,6 +31,11 @@ type Lfu[K comparable, V any] struct {
 }
 
 func (lfu *Lfu[K, V]) OrderPrint() {
+	if lfu.row == nil {
+		lfu = defaultLfu[K, V]()
+		return
+	}
+
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	level := lfu.min
@@ -78,6 +94,10 @@ func (lfu *Lfu[K, V]) getMin(start int) {
 }
 
 func (lfu *Lfu[K, V]) Len() int {
+	if lfu.row == nil {
+		lfu = defaultLfu[K, V]()
+		return 0
+	}
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	return len(lfu.cache)
@@ -91,6 +111,10 @@ func (lfu *Lfu[K, V]) LastKey() K {
 }
 
 func (lfu *Lfu[K, V]) Remove(key K) {
+	if lfu.row == nil {
+		lfu = defaultLfu[K, V]()
+		return
+	}
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
 	// 先找到这个key
@@ -109,6 +133,22 @@ func (lfu *Lfu[K, V]) Remove(key K) {
 }
 
 func (lfu *Lfu[K, V]) Resize(size int) {
+
+	if lfu.row == nil {
+		claddingSize := 1
+		if lfu.claddingSize != 0 {
+			claddingSize = lfu.claddingSize
+		}
+		lfu = &Lfu[K, V]{
+			row: make(map[int]*Lru[K, V]),
+			// 这里是根据key来查询在那一层
+			cache:        make(map[K]int),
+			mu:           sync.RWMutex{},
+			size:         size,
+			claddingSize: claddingSize,
+		}
+		return
+	}
 	if size <= 0 || size == lfu.size {
 		return
 	}
@@ -124,6 +164,12 @@ func (lfu *Lfu[K, V]) Resize(size int) {
 }
 
 func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
+	if lfu.row == nil {
+		lfu = defaultLfu[K, V]()
+		var v K
+
+		return reflect.Zero(reflect.TypeOf(v)).Interface().(K), false
+	}
 	// 添加一个key
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
@@ -165,6 +211,12 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 
 //
 func (lfu *Lfu[K, V]) Get(key K) (V, bool) {
+	if lfu.row == nil {
+		lfu = defaultLfu[K, V]()
+		var v V
+		return reflect.Zero(reflect.TypeOf(v)).Interface().(V), false
+	}
+
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	if frequent, ok := lfu.cache[key]; ok {
