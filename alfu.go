@@ -18,7 +18,7 @@ func (lfu *Alfu[K, V]) auto() {
 		select {
 		case <-tick.C:
 			lfu.mu.Lock()
-			for index, lru := range lfu.row {
+			for index, lru := range lfu.layer {
 				if index == lfu.min {
 					continue
 				}

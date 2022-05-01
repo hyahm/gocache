@@ -10,7 +10,7 @@ add goroutine below
 		select {
 		case <-tick.C:
 			lfu.mu.Lock()
-			for index, lru := range lfu.row {
+			for index, lru := range lfu.layer {
 				if index == lfu.min {
 					continue
 				}
@@ -42,7 +42,7 @@ Usually only need to use `Add`, `Get` to meet most needs
 Add(key K, value V) (K, bool) // add key and value， If the number exceeds the maximum number, automatically delete the first eliminated value, and return the eliminated key and true, otherwise return the currently inserted key and false    
 Remove(key K)                 // remove key      
 Len() int                     // cache length    
-OrderPrint()                  // order print key and value, if use simple,lru, last one eliminated first , if lfu, alfu, The first row last is eliminated first   
+OrderPrint()                  // order print key and value, if use simple,lru, last one eliminated first , if lfu, alfu, The first layer last is eliminated first   
 Get(key K) (V, bool)          // get value by key  
 LastKey() K                   // get key of last one  
 Resize(int)                   // resize Max size  
