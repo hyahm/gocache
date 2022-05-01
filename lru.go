@@ -21,12 +21,11 @@ type element[K comparable, V any] struct {
 type Lru[K comparable, V any] struct {
 	lru map[K]*element[K, V] //  这里存key 和 元素
 	//保存第一个元素
-	lock      sync.RWMutex
-	root      *element[K, V] // sentinel list element, only &root, root.prev, and root.next are used
-	last      *element[K, V] // 最后一个元素
-	len       int            // 元素长度
-	size      int            // 缓存多少元素
-	PrintFunc func(key, value K, update time.Time)
+	lock sync.RWMutex
+	root *element[K, V] // sentinel list element, only &root, root.prev, and root.next are used
+	last *element[K, V] // 最后一个元素
+	len  int            // 元素长度
+	size int            // 缓存多少元素
 }
 
 func defaultLru[K comparable, V any]() *Lru[K, V] {

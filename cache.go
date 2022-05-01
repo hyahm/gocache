@@ -10,6 +10,7 @@ type Cacher[K comparable, V any] interface {
 	Get(key K) (V, bool)          // 获取值
 	LastKey() K                   // 获取最先要删除的key
 	Resize(int)                   // 重新定义大小
+
 }
 
 type Algorithm int
