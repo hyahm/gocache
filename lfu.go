@@ -40,7 +40,6 @@ func (lfu *Lfu[K, V]) OrderPrint() {
 	defer lfu.mu.RUnlock()
 	level := lfu.min
 	for i := 0; i < lfu.Len(); {
-
 		if lfu.layer[level].Len() != 0 {
 			fmt.Println("layer: ", level)
 			lfu.layer[level].orderPrint()
@@ -80,7 +79,6 @@ func (lfu *Lfu[K, V]) getNextMin(start int) int {
 }
 
 func (lfu *Lfu[K, V]) getMin(start int) {
-	fmt.Println("start: ", start)
 	if len(lfu.cache) == 1 {
 		lfu.min = start
 		return
@@ -174,7 +172,6 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
 	if frequent, ok := lfu.cache[key]; ok {
-
 		// 判断是否存在新层， 不存在就新建
 		level := frequent / lfu.claddingSize
 		if level != frequent+1/lfu.claddingSize {
@@ -195,17 +192,21 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	} else {
 		// 如果当前的大小大于等于
 		if len(lfu.cache) >= int(lfu.size) {
+
 			// 删除最后一个
-			removeKey := lfu.layer[lfu.min].RemoveLast()
+			removeKey := lfu.layer[lfu.min].removeLast()
 			// 删除总缓存
 			delete(lfu.cache, removeKey)
+			lfu.cache[key] = 0
+			lfu.min = 0
+			lfu.add(0, key, value)
+			return removeKey, true
 		}
 		lfu.cache[key] = 0
 		lfu.min = 0
-		lfu.add(lfu.cache[key]/lfu.claddingSize, key, value)
+		lfu.add(0, key, value)
 		// 判断是否超过了缓存值
 	}
-
 	return key, false
 }
 

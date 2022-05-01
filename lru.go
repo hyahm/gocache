@@ -99,13 +99,7 @@ func (lru *Lru[K, V]) PrevKey(key K) any {
 	return nil
 }
 
-func (lru *Lru[K, V]) Remove(key K) {
-	if lru.lru == nil {
-		lru = defaultLru[K, V]()
-		return
-	}
-	lru.lock.Lock()
-	defer lru.lock.Unlock()
+func (lru *Lru[K, V]) remove(key K) {
 	// 不存在就直接返回
 	if _, ok := lru.lru[key]; !ok {
 		return
@@ -138,6 +132,17 @@ func (lru *Lru[K, V]) Remove(key K) {
 	//删除
 	delete(lru.lru, key)
 	lru.len--
+}
+
+func (lru *Lru[K, V]) Remove(key K) {
+	if lru.lru == nil {
+		lru = defaultLru[K, V]()
+		return
+	}
+	lru.lock.Lock()
+	defer lru.lock.Unlock()
+	// 不存在就直接返回
+	lru.remove(key)
 }
 
 func (lru *Lru[K, V]) OrderPrint() {
@@ -263,12 +268,18 @@ func (lru *Lru[K, V]) RemoveLast() K {
 	return lru.removeLast()
 }
 
+// remove last and return remove key
 func (lru *Lru[K, V]) removeLast() K {
 	lastKey := lru.last.key
 
 	if lru.last.prev != nil {
+		newLastKey := lru.last.prev.key
 		lru.last.prev.next = nil
-		lru.lru[lru.last.prev.key] = lru.last.prev
+		lru.lru[newLastKey] = lru.last.prev
+		lru.last = lru.lru[newLastKey]
+		delete(lru.lru, lastKey)
+		lru.len--
+		return lastKey
 	} else {
 		// 如果上个元素是空的， 那么说明这是开头的一个元素
 		if lru.len == 1 {
@@ -279,11 +290,9 @@ func (lru *Lru[K, V]) removeLast() K {
 			lru.lru = make(map[K]*element[K, V])
 			return lastKey
 		}
-
+		var k K
+		return reflect.Zero(reflect.TypeOf(k)).Interface().(K)
 	}
-	delete(lru.lru, lastKey)
-	lru.len--
-	return lastKey
 }
 
 func (lru *Lru[K, V]) moveToPrev(key K, value V) {

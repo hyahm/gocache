@@ -11,38 +11,64 @@ type Alfu[K comparable, V any] struct {
 }
 
 // 唯一不同的多了一个自动计算 频率的goroutine
-func (lfu *Alfu[K, V]) auto() {
+func (alfu *Alfu[K, V]) auto() {
 
 	tick := time.NewTicker(time.Hour * 24)
 	for {
 		select {
 		case <-tick.C:
-			lfu.mu.Lock()
-			for index, lru := range lfu.layer {
-				if index == lfu.min {
-					continue
-				}
-				key, value, update_time := lru.GetLastKeyUpdateTime()
-				if time.Since(update_time).Hours() >= 24 {
-					// 如果最后访问的时间大于1天时间了， 那么将访问频率减少一半
-					// 删除
-					lru.Remove(key)
-					// 添加到新层中
-					lfu.cache[key] = index / 2
-					newLevel := lfu.cache[key] / lfu.claddingSize
-					if lfu.min > newLevel {
-						lfu.min = newLevel
-					}
-
-					lfu.add(newLevel, key, value)
-
-				}
-			}
-			lfu.mu.Unlock()
+			alfu.reduce()
 		}
-
 	}
 
+}
+
+func (alfu *Alfu[K, V]) Reduce() {
+	alfu.mu.Lock()
+	for index, lru := range alfu.layer {
+		if index == alfu.min {
+			continue
+		}
+
+		key, value, _ := lru.GetLastKeyUpdateTime()
+		// 如果最后访问的时间大于1天时间了， 那么将访问频率减少一半
+		// 删除
+		lru.Remove(key)
+		// 添加到新层中
+		alfu.cache[key] = index / 2
+		newLevel := alfu.cache[key] / alfu.claddingSize
+		if alfu.min > newLevel {
+			alfu.min = newLevel
+		}
+
+		alfu.add(newLevel, key, value)
+	}
+	alfu.mu.Unlock()
+}
+
+func (alfu *Alfu[K, V]) reduce() {
+	alfu.mu.Lock()
+	for index, lru := range alfu.layer {
+		if index == alfu.min {
+			continue
+		}
+		key, value, update_time := lru.GetLastKeyUpdateTime()
+		if time.Since(update_time).Hours() >= 24 {
+			// 如果最后访问的时间大于1天时间了， 那么将访问频率减少一半
+			// 删除
+			lru.Remove(key)
+			// 添加到新层中
+			alfu.cache[key] = index / 2
+			newLevel := alfu.cache[key] / alfu.claddingSize
+			if alfu.min > newLevel {
+				alfu.min = newLevel
+			}
+
+			alfu.add(newLevel, key, value)
+
+		}
+	}
+	alfu.mu.Unlock()
 }
 
 // func (lfu *Alfu[K, V]) OrderPrint(frequent int) {
