@@ -133,6 +133,10 @@ func (lru *Lru[K, V]) Remove(key K) {
 func (lru *Lru[K, V]) OrderPrint() {
 	lru.lock.RLock()
 	defer lru.lock.RUnlock()
+	lru.orderPrint()
+}
+
+func (lru *Lru[K, V]) orderPrint() {
 	li := lru.root
 	for li != nil {
 		fmt.Printf("key: %v, value: %v, update_time: %s\n", li.key, li.value, li.update.String())

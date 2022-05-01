@@ -16,6 +16,7 @@ func Test_Lfu(t *testing.T) {
 	// time.Sleep(time.Second)
 
 	l.OrderPrint()
+	t.Log("orange")
 	l.Add("orange", 2)
 	if l.LastKey() != "apple" && l.Len() != 2 {
 		t.Fatal()
