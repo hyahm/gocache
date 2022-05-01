@@ -264,8 +264,6 @@ func main() {
 	// key: cccc, value: 111111, update_time: 2022-05-01 21:06:01.8186799 +0800 CST m=+0.001560401
 	// key: dddd, value: bbbbb, update_time: 2022-05-01 21:06:01.8181554 +0800 CST m=+0.00103590
 	removekey, ok := cache.Add("bbb", "111111")
-	fmt.Println("---------", ok)
-	fmt.Println("---------", removekey)
 	cache.OrderPrint()
 	// layer:  0
 	// key: bbb, value: 111111, update_time: 2022-05-01 21:25:33.6920657 +0800 CST m=+0.002121001
