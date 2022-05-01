@@ -4,7 +4,7 @@ Thread-safe go language general simple, lru, lfu, alfu) algorithm
 ### What is alfu
 The alfu algorithm is based on the lfu algorithm by adding a dynamic reduction level to complement the shortcomings of lfu.
 add goroutine below
-```
+```go
 	tick := time.NewTicker(time.Hour * 24)
 	for {
 		select {
@@ -55,7 +55,7 @@ If it exceeds the set value, it will automatically delete the value at the end, 
   gocache.NewCache[comparable, any](<Max caches of number>, <Algorithm >, [Step size per layer])
   ```
  > example
-  ```
+  ```go
 package main
 
 import (
