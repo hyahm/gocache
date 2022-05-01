@@ -23,7 +23,6 @@ func (lfu *Lfu[K, V]) OrderPrint() {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	level := lfu.min
-	fmt.Println("length: ", lfu.Len())
 	for i := 0; i < lfu.Len(); {
 
 		if lfu.row[level].Len() != 0 {
@@ -36,7 +35,6 @@ func (lfu *Lfu[K, V]) OrderPrint() {
 		}
 
 	}
-	fmt.Println("-------------------------")
 }
 
 // 为了方便修改， 一样也需要一个双向链表
@@ -133,13 +131,9 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 
 		// 判断是否存在新层， 不存在就新建
 		level := frequent / lfu.claddingSize
-		fmt.Println("key: ", key)
-		fmt.Println("frequent: ", frequent)
 		if level != frequent+1/lfu.claddingSize {
 			// 从原来的那层中删除
 			lfu.row[level].Remove(key)
-			fmt.Println("remove key and min: ", lfu.min)
-			fmt.Println("remove key and level: ", level)
 			if lfu.row[level].Len() == 0 && level == lfu.min {
 				// // 如果这一行没有数据了, 并且是最小的一行 那么计算最小层
 				lfu.min = level + 1
@@ -166,7 +160,6 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 		// 判断是否超过了缓存值
 	}
 
-	fmt.Println("min: ", lfu.min)
 	return key, false
 }
 
