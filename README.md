@@ -65,7 +65,7 @@ import (
 )
 
 func main() {
-	cache := gocache.NewCache[string, string](3, gocache.LFU, 2)
+	cache := gocache.NewCache[string, string](3, gocache.LRU)
 
 	cache.Add("adsf", "bbbbb")
 	cache.Add("cccc", "111111")
