@@ -11,20 +11,21 @@ import (
 type Lfu[K comparable, V any] struct {
 	row map[int]*Lru[K, V]
 
-	// 这里是根据key来查询在那一层
-	cache        map[K]int
-	min          int // 记录当前最小层的值
+	cache        map[K]int // 保存key得访问量
+	min          int       // 记录当前最小层的值
+	max          int       // 记录当前最大层的值
 	mu           sync.RWMutex
 	size         int // 大小
 	claddingSize int
+	layerOrder   []int // 层从大到小排序
 }
 
 func (lfu *Lfu[K, V]) OrderPrint() {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
-	for frequent, lru := range lfu.row {
-		fmt.Println("frequent: ", frequent)
-		lru.OrderPrint()
+	for layer := lfu.max; layer <= lfu.min; layer-- {
+		fmt.Println("layer: ", layer)
+		lfu.row[layer].OrderPrint()
 	}
 
 }
@@ -49,6 +50,11 @@ func (lfu *Lfu[K, V]) add(level int, key K, value V) {
 func (lfu *Lfu[K, V]) getMin(start int) {
 	if len(lfu.cache) == 1 {
 		lfu.min = start
+		return
+	}
+
+	if start == lfu.max {
+		lfu.min = lfu.max
 		return
 	}
 
@@ -109,24 +115,26 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
 	if frequent, ok := lfu.cache[key]; ok {
-
+		newLayer := (frequent + 1) / lfu.claddingSize
 		// 判断是否存在新层， 不存在就新建
-		level := frequent / lfu.claddingSize
-		if level != frequent+1/lfu.claddingSize {
+		layer := frequent / lfu.claddingSize
+		if layer != newLayer {
 			// 从原来的那层中删除
-			lfu.row[level].Remove(key)
+			lfu.row[layer].Remove(key)
 
-			if lfu.row[level].Len() == 0 && level == lfu.min {
+			if lfu.row[layer].Len() == 0 && layer == lfu.min {
 				// // 如果这一行没有数据了, 并且是最小的一行 那么计算最小层
-				lfu.getMin(level)
+				lfu.getMin(layer)
 				if len(lfu.cache) > 1 {
 					// 至少留一层
-					delete(lfu.row, level)
+					delete(lfu.row, layer)
 				}
-
 			}
 		}
-		lfu.add(frequent+1/lfu.claddingSize, key, value)
+		lfu.add(newLayer, key, value)
+		if newLayer > lfu.max {
+			lfu.max = newLayer
+		}
 		lfu.cache[key] = frequent + 1
 	} else {
 		// 如果当前的大小大于等于
