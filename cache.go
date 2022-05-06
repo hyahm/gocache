@@ -10,6 +10,7 @@ type Cacher[K comparable, V any] interface {
 	Get(key K) (V, bool)          // 获取值
 	LastKey() K                   // 获取最先要删除的key
 	Resize(int)                   // 重新定义大小
+
 }
 
 type Algorithm int
@@ -50,7 +51,7 @@ func NewCache[K comparable, V any](size int, t Algorithm, claddingSize ...int) C
 			cs = claddingSize[0]
 		}
 		return &Lfu[K, V]{
-			row: make(map[int]*Lru[K, V]),
+			layer: make(map[int]*Lru[K, V]),
 			// 这里是根据key来查询在那一层
 			cache:        make(map[K]int),
 			mu:           sync.RWMutex{},
@@ -64,7 +65,7 @@ func NewCache[K comparable, V any](size int, t Algorithm, claddingSize ...int) C
 		}
 		alfu := &Alfu[K, V]{
 			&Lfu[K, V]{
-				row: make(map[int]*Lru[K, V]),
+				layer: make(map[int]*Lru[K, V]),
 				// 这里是根据key来查询在那一层
 				cache:        make(map[K]int),
 				mu:           sync.RWMutex{},

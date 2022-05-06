@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// 简单缓存， 先进后出
+// 简单缓存， 先进先出
 
 type SimpleCache[K comparable, V any] struct {
 	cache map[K]V
