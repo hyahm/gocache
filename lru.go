@@ -113,6 +113,10 @@ func (lru *Lru[K, V]) remove(key K) {
 			// 如果第二个元素存在就将 root指向第二个元素
 			lru.root = lru.lru[nextKey]
 			lru.lru[nextKey].prev = nil
+		} else {
+			lru.lru = make(map[K]*element[K, V])
+			lru.root = nil
+			lru.last = nil
 		}
 	case lru.last.key:
 		if lru.last.prev != nil {

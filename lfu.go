@@ -35,10 +35,13 @@ func (lfu *Lfu[K, V]) OrderPrint() {
 	lfu.mu.RLock()
 	defer lfu.mu.RUnlock()
 	for layer := lfu.max; layer >= lfu.min; layer-- {
+		if lfu.layer[layer].len == 0 {
+			continue
+		}
 		fmt.Println("layer: ", layer)
 		lfu.layer[layer].OrderPrint()
-	}
 
+	}
 	// lfu.mu.RLock()
 	// defer lfu.mu.RUnlock()
 	// level := lfu.min
@@ -180,6 +183,7 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	lfu.mu.Lock()
 	defer lfu.mu.Unlock()
 	if frequent, ok := lfu.cache[key]; ok {
+
 		newLayer := (frequent + 1) / lfu.claddingSize
 		// 判断是否存在新层， 不存在就新建
 		layer := frequent / lfu.claddingSize
