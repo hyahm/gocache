@@ -25,11 +25,14 @@ func (alfu *Alfu[K, V]) auto() {
 
 func (alfu *Alfu[K, V]) Reduce() {
 	alfu.mu.Lock()
+
 	for index, lru := range alfu.layer {
+		if lru.last == nil {
+			continue
+		}
 		if index == alfu.min {
 			continue
 		}
-
 		key, value, _ := lru.GetLastKeyUpdateTime()
 		// 如果最后访问的时间大于1天时间了， 那么将访问频率减少一半
 		// 删除

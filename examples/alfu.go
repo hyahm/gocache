@@ -10,22 +10,27 @@ func main() {
 	// only ALFU have Reduce function
 	cache := gocache.NewCache[string, string](3, gocache.ALFU).(*gocache.Alfu[string, string])
 	cache.Add("dddd", "bbbbb")
-	// cache.OrderPrint()
+	cache.OrderPrint()
+	fmt.Println("-----------11111---------------")
 	// 	layer:  0
 	// key: dddd, value: bbbbb, update_time: ...
 	cache.Add("cccc", "111111")
-	// cache.OrderPrint()
+
+	cache.OrderPrint()
 	// 	layer:  0
 	// key: cccc, value: 111111, update_time: ...
 	// key: dddd, value: bbbbb, update_time: ...
+	fmt.Println("-------------222222-------------")
 	cache.Add("cccc", "111111")
-	// cache.OrderPrint()
+	cache.OrderPrint()
+	fmt.Println("-----------333333---------------")
 	// 	layer:  0
 	// key: dddd, value: bbbbb, update_time: ...
 	// 	layer:  1
 	// key: cccc, value: 111111, update_time: ...
 	cache.Reduce()
-	// cache.OrderPrint()
+	cache.OrderPrint()
+	fmt.Println("-------------44444-------------")
 	// 	layer:  0
 	// key: cccc, value: 111111, update_time: 2022-05-01 20:54:43.9150871 +0800 CST m=+0.001028301
 	// key: dddd, value: bbbbb, update_time: 2022-05-01 20:54:43.9150871 +0800 CST m=+0.001028301
@@ -50,19 +55,20 @@ func main() {
 	// layer:  2
 	// key: aaaa, value: 111111, update_time: 2022-05-01 21:04:15.6276385 +0800 CST m=+0.001613801
 	cache.Add("aaaa", "111111")
-	// cache.OrderPrint()
+	cache.OrderPrint()
 	// 	layer:  0
 	// key: cccc, value: 111111, update_time: 2022-05-01 21:04:33.6610861 +0800 CST m=+0.001573401
 	// key: dddd, value: bbbbb, update_time: 2022-05-01 21:04:33.6605573 +0800 CST m=+0.001044601
 	// layer:  3
 	// key: aaaa, value: 111111, update_time: 2022-05-01 21:04:33.6610861 +0800 CST m=+0.001573401
 	cache.Reduce()
-	cache.Reduce()
+	// cache.Reduce()
 	// cache.OrderPrint()
 	// 	layer:  0
 	// key: aaaa, value: 111111, update_time: 2022-05-01 21:06:01.8192073 +0800 CST m=+0.002087801
 	// key: cccc, value: 111111, update_time: 2022-05-01 21:06:01.8186799 +0800 CST m=+0.001560401
 	// key: dddd, value: bbbbb, update_time: 2022-05-01 21:06:01.8181554 +0800 CST m=+0.00103590
+	fmt.Println("-------------5555-------------")
 	removekey, ok := cache.Add("bbb", "111111")
 	fmt.Println("---------", ok)
 	fmt.Println("---------", removekey)
