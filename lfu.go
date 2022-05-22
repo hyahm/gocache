@@ -2,7 +2,6 @@ package gocache
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 )
 
@@ -176,8 +175,7 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 	if lfu.layer == nil {
 		lfu = defaultLfu[K, V]()
 		var v K
-
-		return reflect.Zero(reflect.TypeOf(v)).Interface().(K), false
+		return v, false
 	}
 	// 添加一个key
 	lfu.mu.Lock()
@@ -228,9 +226,8 @@ func (lfu *Lfu[K, V]) Add(key K, value V) (K, bool) {
 //
 func (lfu *Lfu[K, V]) Get(key K) (V, bool) {
 	if lfu.layer == nil {
-		lfu = defaultLfu[K, V]()
 		var v V
-		return reflect.Zero(reflect.TypeOf(v)).Interface().(V), false
+		return v, false
 	}
 
 	lfu.mu.RLock()
@@ -241,6 +238,6 @@ func (lfu *Lfu[K, V]) Get(key K) (V, bool) {
 		}
 	}
 	var v V
-	return reflect.Zero(reflect.TypeOf(v)).Interface().(V), false
+	return v, false
 
 }

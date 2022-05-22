@@ -2,12 +2,10 @@ package gocache
 
 import (
 	"log"
-	"reflect"
 	"sync"
 )
 
 // 简单缓存， 先进先出
-
 type SimpleCache[K comparable, V any] struct {
 	cache map[K]V
 	order []K
@@ -40,8 +38,7 @@ func (sc *SimpleCache[K, V]) Get(key K) (V, bool) {
 		return v, ok
 	}
 	var v V
-
-	return reflect.Zero(reflect.TypeOf(v)).Interface().(V), false
+	return v, false
 }
 
 func (sc *SimpleCache[K, V]) Resize(size int) {

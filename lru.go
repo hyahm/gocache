@@ -2,7 +2,6 @@ package gocache
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -57,7 +56,7 @@ func (lru *Lru[K, V]) Get(key K) (V, bool) {
 		return lru.lru[key].value, true
 	}
 	var v V
-	return reflect.Zero(reflect.TypeOf(v)).Interface().(V), false
+	return v, false
 }
 
 func (lru *Lru[K, V]) GetLastKeyUpdateTime() (K, V, time.Time) {
@@ -265,7 +264,7 @@ func (lru *Lru[K, V]) RemoveLast() K {
 	if lru.lru == nil {
 		lru = defaultLru[K, V]()
 		var v K
-		return reflect.Zero(reflect.TypeOf(v)).Interface().(K)
+		return v
 	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
@@ -295,7 +294,7 @@ func (lru *Lru[K, V]) removeLast() K {
 			return lastKey
 		}
 		var k K
-		return reflect.Zero(reflect.TypeOf(k)).Interface().(K)
+		return k
 	}
 }
 
@@ -351,7 +350,7 @@ func (lru *Lru[K, V]) FirstKey() K {
 	if lru.lru == nil {
 		lru = defaultLru[K, V]()
 		var v K
-		return reflect.Zero(reflect.TypeOf(v)).Interface().(K)
+		return v
 	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
@@ -362,7 +361,7 @@ func (lru *Lru[K, V]) LastKey() K {
 	if lru.lru == nil {
 		lru = defaultLru[K, V]()
 		var v K
-		return reflect.Zero(reflect.TypeOf(v)).Interface().(K)
+		return v
 	}
 	lru.lock.Lock()
 	defer lru.lock.Unlock()
